@@ -1,3 +1,5 @@
+version: '2.1'
+
 services:
   settings-tp:
     image: hyperledger/sawtooth-settings-tp:latest
@@ -34,12 +36,24 @@ services:
     ports:
       - "8008:8008"
     command: sawtooth-rest-api -v --connect tcp://validator:4004 --bind 0.0.0.0:8008
+    #command: sawtooth-rest-api -v --connect tcp://validator:4004 --bind rest-api:0.0.0.0:8008
 
   devmode-engine:
     image: hyperledger/sawtooth-devmode-engine-rust:latest
     container_name: sawtooth-devmode-engine-rust
     command: devmode-engine-rust -v --connect tcp://validator:5050
+  
+  #sensor-simulator:
+    #image: hyperledger/sawtooth-intkey-tp-python:latest
+    #container_name: sensor-simulator
+    #volumes:
+    #  - ./src:/app
+    #working_dir: /app
+    #command: python3 sensor-simulator.py
+    #depends_on:
+    #  - rest-api*/
 
+# Service giả lập thiết bị IoT
   sensor-simulator:
     build:
       context: .
@@ -49,14 +63,15 @@ services:
       - rest-api
     restart: always
 
+  # Service Web Dashboard (Node.js)
   web-dashboard:
     image: node:18-slim
     container_name: web-dashboard
     working_dir: /app
     volumes:
-      - ./nodejs-server:/app
+      - .:/app
     ports:
-      - "3001:3000" # Máy thật (3001) trỏ vào Node.js Container (3000)
+      - "3000:3001"
     command: sh -c "npm install && node server.js"
     depends_on:
       - rest-api

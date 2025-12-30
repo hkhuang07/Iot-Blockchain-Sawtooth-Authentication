@@ -1,0 +1,18 @@
+FROM python:3.10-slim
+
+# Cài đặt các thư viện hệ thống cần thiết cho mật mã học
+RUN apt-get update && apt-get install -y \
+    pkg-config \
+    libsecp256k1-dev \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Cài đặt thư viện Sawtooth
+RUN pip install --no-cache-dir sawtooth-sdk sawtooth-signing requests
+
+# Copy script vào container
+COPY sensor-simulator.py .
+
+CMD ["python", "sensor-simulator.py"]

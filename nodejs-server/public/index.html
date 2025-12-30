@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Smart Garden - Blockchain Auth</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+      body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; padding: 40px; color: #333; }
+      .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); max-width: 800px; margin: auto; }
+      h1 { text-align: center; color: #2e7d32; }
+      .status-box { background: #e8f5e9; padding: 10px; border-radius: 6px; margin-bottom: 20px; text-align: center; }
+      .status { color: #43a047; font-weight: bold; }
+      .sensor-item { padding: 15px; border-bottom: 1px solid #eee; }
+      .sensor-item:last-child { border-bottom: none; }
+      .address { font-size: 0.8em; color: #666; font-family: monospace; }
+      .value { font-size: 1.2em; color: #1565c0; font-weight: bold; }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>🌿 Smart Garden IoT Ledger</h1>
+      <div class="status-box">
+        Status: <span class="status">● Connected to Hyperledger Sawtooth</span>
+      </div>
+      <div id="data-list">Đang xác thực dữ liệu từ Blockchain...</div>
+    </div>
+
+    <script>
+      async function fetchData() {
+        try {
+          // Vì index.html được serve từ port 3001, dùng đường dẫn tương đối là an toàn nhất
+          const res = await fetch("/api/data");
+          const data = await res.json();
+          const container = document.getElementById("data-list");
+
+          if (data.error) {
+            container.innerHTML = `<p style="color:red;">${data.error}</p>`;
+            return;
+          }
+
+          container.innerHTML = data.map(item => `
+            <div class="sensor-item">
+              <div class="address">Address: ${item.address}</div>
+              <div class="value">
+                📊 Sensor Value: ${(parseInt(item.raw) / 100).toFixed(2)}
+              </div>
+            </div>
+          `).join("");
+        } catch (err) {
+          console.error("Fetch error:", err);
+        }
+      }
+
+      // Cập nhật dữ liệu mỗi 3 giây (3000ms)
+      setInterval(fetchData, 3000);
+      fetchData(); // Gọi lần đầu ngay khi tải trang
+    </script>
+  </body>
+</html>
