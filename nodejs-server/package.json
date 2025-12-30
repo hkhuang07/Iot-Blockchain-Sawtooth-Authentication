@@ -1,0 +1,28 @@
+{
+  "name": "blockchain-sawtooth-nodejs-server",
+  "version": "1.0.0",
+  "description": "Nodejs Server get data from Sawtooth as Base64 type and encrypt address IntegerKey have struct 1cf126 + hashcode of variable name",
+  "main": "server.js",
+  "scripts": {
+    "start:server": "node server.js",
+    "start:all": "npm run start:server",
+    "dev:server": "nodemon server.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "setup": "npm install && echo 'Setting up environment...' && cp .env.example .env"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hkhuang07/Iot-Blockchain-Sawtooth-Authentication.git"
+  },
+  "author": "Huynh Quoc Huy",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/hkhuang07/Iot-Blockchain-Sawtooth-Authentication/issues"
+  },
+  "homepage": "https://github.com/hkhuang07/Iot-Blockchain-Sawtooth-Authentication#readme",
+  "dependencies": {
+    "axios": "^1.13.2",
+    "express": "^5.2.1",
+    "nodemon": "^3.1.11"
+  }
+}
