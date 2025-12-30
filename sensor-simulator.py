@@ -8,7 +8,7 @@ from sawtooth_intkey_default.intkey_message_factory import IntkeyMessageFactory
 context = create_context('secp256k1')
 private_key = context.new_random_private_key()
 signer = context.new_signer(private_key)
-factory = IntkeyMessageFactory(signer=signer)
+factory = dỉ(signer=signer)
 
 #URL_REST_API = "http://localhost:8008/batches"
 URL_REST_API = "http://rest-api:8008/batches"

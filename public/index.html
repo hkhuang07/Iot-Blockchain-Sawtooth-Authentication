@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Smart Garden - Blockchain Auth</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: sans-serif; background: #f4f4f4; padding: 20px; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .status { color: green; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>🌿 Smart Garden IoT - Blockchain Authentication</h1>
+    <div class="card">
+        <p>Status: <span class="status">Connected to Hyperledger Sawtooth</span></p>
+        <div id="data-list">Loading data from Blockchain...</div>
+    </div>
+    
+    <script>
+        async function fetchData() {
+            const res = await fetch('/api/data');
+            const data = await res.json();
+            const container = document.getElementById('data-list');
+            container.innerHTML = data.map(item => `
+                <p><strong>Address:</strong> ${item.address.substring(0,15)}... 
+                   <br> 📊 <strong>Value:</strong> ${(parseInt(item.raw) / 100).toFixed(2)}</p>
+                <hr>
+            `).join('');
+        }
+        setInterval(fetchData, 3000); // Cập nhật mỗi 3 giây
+    </script>
+</body>
+</html>
