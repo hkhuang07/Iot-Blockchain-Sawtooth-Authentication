@@ -11,6 +11,12 @@ const fs = require('fs');
 const path = require('path');
 const { EventEmitter } = require('events');
 
+const context = createContext('secp256k1');
+const privateKey = context.newRandomPrivateKey();
+const signer = new CryptoFactory(context).newSigner(privateKey)
+console.log("Public Key thiết bị:", signer.getPublicKey().asHex());
+
+
 // Configuration
 const CONFIG = {
     VALIDATOR_URL: process.env.VALIDATOR_URL || 'http://rest-api-0:8008',

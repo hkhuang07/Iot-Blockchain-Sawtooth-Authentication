@@ -1,0 +1,12 @@
+/dashboard/node_modules
+/dashboard/package-lock.json
+
+/processors
+
+#/sawtooth/genesis/config-genesis.batch
+#/sawtooth/genesis/config.batch
+#/sawtooth/keys/
+
+/simulator/
+
+/subscribers

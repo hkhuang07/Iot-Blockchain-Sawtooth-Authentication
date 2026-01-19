@@ -119,8 +119,8 @@ smart-garden-iot/
 ### 1. Clone and Setup
 
 ```bash
-git clone <repository-url>
-cd smart-garden-iot
+git clone https://github.com/hkhuang07/Iot-Blockchain-Sawtooth-Authentication
+cd Iot-Blockchain-Sawtooth-Authentication
 ```
 
 ### 2. Generate Validator Keys
@@ -148,6 +148,46 @@ docker run --rm \
         -k /dev/null \
         -o /genesis/genesis.batch
 ```
+- or using sawtooth/genesis
+- Step A: Create a folder to store Genesis (if it doesn't already exist)
+```
+mkdir -p sawtooth/genesis
+```
+- Step B: Create the Genesis configuration file (config-genesis.batch). This command will initialize the basic system settings for the Blockchain:
+```
+docker run --rm \
+  -v $(pwd)/sawtooth/genesis:/genesis \
+  hyperledger/sawtooth-validator:latest \
+  sawset genesis -k /dev/null -o /genesis/config-genesis.batch
+```
+- Step C: Add Validator-0's key to the configuration (Required for PBFT) To demonstrate integrity and identity, you need to assign validator-0's public key as the administrator key:
+```
+docker run --rm \
+  -v $(pwd)/sawtooth/keys:/keys \
+  -v $(pwd)/sawtooth/genesis:/genesis \
+  hyperledger/sawtooth-validator:latest \
+  sawset proposal create \
+    -k /keys/validator-0.priv \
+    sawtooth.settings.vote.proposers=$(cat sawtooth/keys/validator-0.pub) \
+    -o /genesis/proposers.batch
+
+```
+
+- 3. Tại sao nên dùng sawtooth-validator?
+- Tính nhất quán: Trong tệp docker-compose.yaml của bạn, tất cả các dịch vụ validator đều sử dụng ảnh hyperledger/sawtooth-validator:latest. Việc sử dụng cùng một ảnh để tạo dữ liệu genesis đảm bảo định dạng tệp tin tương thích 100%.
+- Đầy đủ công cụ: Ảnh này chứa đầy đủ các bộ công cụ quản trị (admin tools) của Hyperledger Sawtooth.
+
+- Final Step: Combining into a Genesis Block. After creating the .batch files, use the following command to merge them into a stub block:
+
+```
+docker run --rm \
+  -v $(pwd)/sawtooth/keys:/keys \
+  -v $(pwd)/sawtooth/genesis:/genesis \
+  hyperledger/sawtooth-validator:latest \
+  sawadm genesis /genesis/config-genesis.batch /genesis/proposers.batch
+```
+
+
 
 ### 4. Start the Network
 

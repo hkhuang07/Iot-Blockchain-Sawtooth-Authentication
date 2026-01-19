@@ -1,9 +1,7 @@
-version: '3.6'
-
 services:
-  # =====================================================
-  # Blockchain Network - 4 PBFT Validators
-  # =====================================================
+  # ========================================
+  # Blockchain Network - 4 PBFT Validators  
+  # ========================================
   
   validator-0:
     image: hyperledger/sawtooth-validator:latest
@@ -11,6 +9,7 @@ services:
     expose:
       - 4004
       - 8800
+      - 5050
     ports:
       - "4004:4004"
       - "8800:8800"
@@ -21,37 +20,29 @@ services:
       - ./sawtooth/keys/validator-0.pub:/etc/sawtooth/keys/validator.pub:ro
       - ./sawtooth/genesis:/genesis:ro
     command: |
-      bash -c '
-        sawtooth-validator \
+      bash -c "
+        if [ ! -f /etc/sawtooth/keys/validator.priv ]; then
+          sawadm keygen
+        fi;
+        sawtooth-validator -vv \
           --endpoint tcp://validator-0:8800 \
-          --bind network:tcp://eth0:4004 \
+          --bind network:tcp://eth0:8800 \
           --bind component:tcp://eth0:4004 \
+          --bind consensus:tcp://eth0:5050 \
           --peering static \
-          --peers tcp://validator-0:8800,tcp://validator-1:8800,tcp://validator-2:8800,tcp://validator-3:8800 \
+          --peers tcp://validator-1:8800,tcp://validator-2:8800,tcp://validator-3:8800 \
           --scheduler parallel \
           --network-checkpoint 10
-      '
-    depends_on:
-      - pbft-engine-0
+      "
     networks:
       - sawtooth-net
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4004/blocks"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
+    
   pbft-engine-0:
     image: hyperledger/sawtooth-pbft-engine:latest
     container_name: sawtooth-pbft-engine-0
     environment:
       - RUST_LOG=debug
-    command: |
-      bash -c '
-        pbft-engine -vv --connect tcp://validator-0:5050
-      '
-    depends_on:
-      - validator-0
+    command: pbft-engine -vv --connect tcp://validator-0:5050
     networks:
       - sawtooth-net
 
@@ -68,28 +59,32 @@ services:
       - ./sawtooth/keys/validator-0.priv:/etc/sawtooth/keys/validator.priv:ro
       - ./sawtooth/keys/validator-0.pub:/etc/sawtooth/keys/validator.pub:ro
     command: |
-      bash -c '
-        sawtooth-rest-api \
-          --connect tcp://validator-0:4004 \
-          --bind rest-api-0:8008 \
-          --opentsdb-url http://opentSDB:4427 \
-          --opentsdb-db database1
-      '
+        bash -c '
+          sawtooth-rest-api \
+            --connect tcp://validator-0:4004 \
+            --bind rest-api-0:8008 \
+            --opentsdb-url http://opentSDB:4427 \
+            --opentsdb-db database1
+        '    
     depends_on:
       - validator-0
     networks:
       - sawtooth-net
 
+  # ========================================
   # Validator 1
+  # ========================================
+  
   validator-1:
     image: hyperledger/sawtooth-validator:latest
     container_name: sawtooth-validator-1
     expose:
       - 4004
-      - 8801
+      - 8800
+      - 5050
     ports:
       - "4005:4004"
-      - "8801:8801"
+      - "8801:8800"
     environment:
       - SAWTHOME=/etc/sawtooth
     volumes:
@@ -97,21 +92,20 @@ services:
       - ./sawtooth/keys/validator-1.pub:/etc/sawtooth/keys/validator.pub:ro
     command: |
       bash -c '
-        sawtooth-validator \
+        sawtooth-validator -vv \
           --endpoint tcp://validator-1:8800 \
-          --bind network:tcp://eth0:4004 \
+          --bind network:tcp://eth0:8800 \
           --bind component:tcp://eth0:4004 \
+          --bind consensus:tcp://eth0:5050 \
           --peering static \
-          --peers tcp://validator-0:8800,tcp://validator-1:8800,tcp://validator-2:8800,tcp://validator-3:8800 \
+          --peers tcp://validator-0:8800,tcp://validator-2:8800,tcp://validator-3:8800 \
           --scheduler parallel \
           --network-checkpoint 10
       '
-    depends_on:
-      - pbft-engine-1
     networks:
       - sawtooth-net
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4004/blocks"]
+      test: ["CMD", "curl", "-f", "http://localhost:8008/blocks"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -121,12 +115,7 @@ services:
     container_name: sawtooth-pbft-engine-1
     environment:
       - RUST_LOG=debug
-    command: |
-      bash -c '
-        pbft-engine -vv --connect tcp://validator-1:5050
-      '
-    depends_on:
-      - validator-1
+    command: pbft-engine -vv --connect tcp://validator-1:5050
     networks:
       - sawtooth-net
 
@@ -134,7 +123,7 @@ services:
     image: hyperledger/sawtooth-rest-api:latest
     container_name: sawtooth-rest-api-1
     expose:
-      - 8009
+      - 8008
     ports:
       - "8009:8008"
     environment:
@@ -155,16 +144,20 @@ services:
     networks:
       - sawtooth-net
 
+  # ========================================
   # Validator 2
+  # ========================================
+  
   validator-2:
     image: hyperledger/sawtooth-validator:latest
     container_name: sawtooth-validator-2
     expose:
       - 4004
-      - 8802
+      - 8800
+      - 5050
     ports:
       - "4006:4004"
-      - "8802:8802"
+      - "8802:8800"
     environment:
       - SAWTHOME=/etc/sawtooth
     volumes:
@@ -172,36 +165,25 @@ services:
       - ./sawtooth/keys/validator-2.pub:/etc/sawtooth/keys/validator.pub:ro
     command: |
       bash -c '
-        sawtooth-validator \
+        sawtooth-validator -vv \
           --endpoint tcp://validator-2:8800 \
-          --bind network:tcp://eth0:4004 \
+          --bind network:tcp://eth0:8800 \
           --bind component:tcp://eth0:4004 \
+          --bind consensus:tcp://eth0:5050 \
           --peering static \
-          --peers tcp://validator-0:8800,tcp://validator-1:8800,tcp://validator-2:8800,tcp://validator-3:8800 \
+          --peers tcp://validator-0:8800,tcp://validator-1:8800,tcp://validator-3:8800 \
           --scheduler parallel \
           --network-checkpoint 10
       '
-    depends_on:
-      - pbft-engine-2
     networks:
       - sawtooth-net
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4004/blocks"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
   pbft-engine-2:
     image: hyperledger/sawtooth-pbft-engine:latest
     container_name: sawtooth-pbft-engine-2
     environment:
       - RUST_LOG=debug
-    command: |
-      bash -c '
-        pbft-engine -vv --connect tcp://validator-2:5050
-      '
-    depends_on:
-      - validator-2
+    command: pbft-engine -vv --connect tcp://validator-2:5050
     networks:
       - sawtooth-net
 
@@ -209,7 +191,7 @@ services:
     image: hyperledger/sawtooth-rest-api:latest
     container_name: sawtooth-rest-api-2
     expose:
-      - 8010
+      - 8008
     ports:
       - "8010:8008"
     environment:
@@ -230,16 +212,20 @@ services:
     networks:
       - sawtooth-net
 
+  # ========================================
   # Validator 3
+  # ========================================
+  
   validator-3:
     image: hyperledger/sawtooth-validator:latest
     container_name: sawtooth-validator-3
     expose:
       - 4004
-      - 8803
+      - 8800
+      - 5050
     ports:
       - "4007:4004"
-      - "8803:8803"
+      - "8803:8800"
     environment:
       - SAWTHOME=/etc/sawtooth
     volumes:
@@ -247,21 +233,20 @@ services:
       - ./sawtooth/keys/validator-3.pub:/etc/sawtooth/keys/validator.pub:ro
     command: |
       bash -c '
-        sawtooth-validator \
+        sawtooth-validator -vv \
           --endpoint tcp://validator-3:8800 \
-          --bind network:tcp://eth0:4004 \
+          --bind network:tcp://eth0:8800 \
           --bind component:tcp://eth0:4004 \
+          --bind consensus:tcp://eth0:5050 \
           --peering static \
-          --peers tcp://validator-0:8800,tcp://validator-1:8800,tcp://validator-2:8800,tcp://validator-3:8800 \
+          --peers tcp://validator-0:8800,tcp://validator-1:8800,tcp://validator-2:8800 \
           --scheduler parallel \
           --network-checkpoint 10
       '
-    depends_on:
-      - pbft-engine-3
     networks:
       - sawtooth-net
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4004/blocks"]
+      test: ["CMD", "curl", "-f", "http://localhost:8008/blocks"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -271,12 +256,7 @@ services:
     container_name: sawtooth-pbft-engine-3
     environment:
       - RUST_LOG=debug
-    command: |
-      bash -c '
-        pbft-engine -vv --connect tcp://validator-3:5050
-      '
-    depends_on:
-      - validator-3
+    command: pbft-engine -vv --connect tcp://validator-3:5050
     networks:
       - sawtooth-net
 
@@ -284,7 +264,7 @@ services:
     image: hyperledger/sawtooth-rest-api:latest
     container_name: sawtooth-rest-api-3
     expose:
-      - 8011
+      - 8008
     ports:
       - "8011:8008"
     environment:
@@ -305,9 +285,9 @@ services:
     networks:
       - sawtooth-net
 
-  # =====================================================
+  # ========================================
   # Settings Transaction Processor (Required for PBFT)
-  # =====================================================
+  # ========================================
   
   settings-tp:
     image: hyperledger/sawtooth-settings-tp:latest
@@ -316,16 +296,13 @@ services:
       - validator-0
     environment:
       - RUST_LOG=sawtooth_settings_tp=DEBUG
-    command: |
-      bash -c '
-        settings-tp -v --connect tcp://validator-0:4004
-      '
+    command: settings-tp -v --connect tcp://validator-0:4004
     networks:
       - sawtooth-net
 
-  # =====================================================
+  # ========================================
   # Garden Smart Contract Transaction Processor
-  # =====================================================
+  # ========================================
   
   garden-tp:
     build:
@@ -338,16 +315,13 @@ services:
       - PYTHONPATH=/project
     volumes:
       - ./processors/garden_tp:/project
-    command: |
-      bash -c '
-        python3 main.py --connect tcp://validator-0:4004 -v
-      '
+    command: python3 main.py --connect tcp://validator-0:4004 -v
     networks:
       - sawtooth-net
 
-  # =====================================================
+  # ========================================
   # MongoDB for Off-chain Storage
-  # =====================================================
+  # ========================================
   
   mongodb:
     image: mongo:latest
@@ -364,15 +338,10 @@ services:
       - MONGO_INITDB_ROOT_PASSWORD=password123
     networks:
       - sawtooth-net
-    healthcheck:
-      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
-  # =====================================================
+  # ========================================
   # IoT Gateway (Receives ESP32 Data)
-  # =====================================================
+  # ========================================
   
   iot-gateway:
     build:
@@ -394,16 +363,13 @@ services:
     volumes:
       - ./gateway:/app
       - ./device_keys:/app/keys
-    command: |
-      bash -c '
-        node index.js
-      '
+    command: node index.js
     networks:
       - sawtooth-net
 
-  # =====================================================
+  # ========================================
   # Event Subscriber (Listens to Blockchain Events)
-  # =====================================================
+  # ========================================
   
   event-subscriber:
     build:
@@ -422,16 +388,13 @@ services:
       - SOCKET_SERVER=http://dashboard:8080
     volumes:
       - ./subscriber:/app
-    command: |
-      bash -c '
-        node sync.js
-      '
+    command: node sync.js
     networks:
       - sawtooth-net
 
-  # =====================================================
+  # ========================================
   # Vue.js Dashboard
-  # =====================================================
+  # ========================================
   
   dashboard:
     build:
@@ -453,9 +416,9 @@ services:
     networks:
       - sawtooth-net
 
-  # =====================================================
+  # ========================================
   # Wokwi ESP32 Simulator (Optional - runs locally)
-  # =====================================================
+  # ========================================
   
   # sensor-simulator:
   #   build:
@@ -472,10 +435,7 @@ services:
   #     - GATEWAY_URL=http://iot-gateway:3000/api/telemetry
   #   volumes:
   #     - ./simulator:/app
-  #   command: |
-  #     bash -c '
-  #       python3 sim_esp32.py
-  #     '
+  #   command: python3 sim_esp32.py
   #   networks:
   #     - sawtooth-net
 
