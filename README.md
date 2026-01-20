@@ -148,19 +148,25 @@ docker run --rm \
         -k /dev/null \
         -o /genesis/genesis.batch
 ```
+
 - or using sawtooth/genesis
 - Step A: Create a folder to store Genesis (if it doesn't already exist)
+
 ```
 mkdir -p sawtooth/genesis
 ```
+
 - Step B: Create the Genesis configuration file (config-genesis.batch). This command will initialize the basic system settings for the Blockchain:
+
 ```
 docker run --rm \
   -v $(pwd)/sawtooth/genesis:/genesis \
   hyperledger/sawtooth-validator:latest \
   sawset genesis -k /dev/null -o /genesis/config-genesis.batch
 ```
+
 - Step C: Add Validator-0's key to the configuration (Required for PBFT) To demonstrate integrity and identity, you need to assign validator-0's public key as the administrator key:
+
 ```
 docker run --rm \
   -v $(pwd)/sawtooth/keys:/keys \
@@ -176,7 +182,6 @@ docker run --rm \
 - 3. Tại sao nên dùng sawtooth-validator?
 - Tính nhất quán: Trong tệp docker-compose.yaml của bạn, tất cả các dịch vụ validator đều sử dụng ảnh hyperledger/sawtooth-validator:latest. Việc sử dụng cùng một ảnh để tạo dữ liệu genesis đảm bảo định dạng tệp tin tương thích 100%.
 - Đầy đủ công cụ: Ảnh này chứa đầy đủ các bộ công cụ quản trị (admin tools) của Hyperledger Sawtooth.
-
 - Final Step: Combining into a Genesis Block. After creating the .batch files, use the following command to merge them into a stub block:
 
 ```
@@ -187,13 +192,20 @@ docker run --rm \
   sawadm genesis /genesis/config-genesis.batch /genesis/proposers.batch
 ```
 
-
+- After this command finishes running, a genesis.batch file will appear in the sawtooth/genesis directory. At this point, you are ready to run: `docker compose up -d --build`
 
 ### 4. Start the Network
 
 ```bash
+#clean cache build:
+docker builder prune -a
+
+#clean system if previous step not enought to up composer
+docker system prune
+
 # Build and start all services
-docker-compose up -d
+docker compose up -d --build
+#docker -compose up -d 
 
 # View logs
 docker-compose logs -f
@@ -205,26 +217,27 @@ docker-compose ps
 ### 5. Access the Dashboard
 
 Open your browser and navigate to:
+
 - **Dashboard**: http://localhost:8080
 - **REST API**: http://localhost:3000
 - **Validator-0**: http://localhost:8008
 
 ## Services
 
-| Service | Port | Description |
-|---------|------|-------------|
-| validator-0 | 4004, 8800 | PBFT Validator Node 0 |
-| validator-1 | 4004, 8801 | PBFT Validator Node 1 |
-| validator-2 | 4004, 8802 | PBFT Validator Node 2 |
-| validator-3 | 4004, 8803 | PBFT Validator Node 3 |
-| rest-api-0 | 8008 | REST API (Validator 0) |
-| rest-api-1 | 8009 | REST API (Validator 1) |
-| rest-api-2 | 8010 | REST API (Validator 2) |
-| rest-api-3 | 8011 | REST API (Validator 3) |
-| iot-gateway | 3000 | IoT Gateway API |
-| event-subscriber | 3001 | WebSocket Server |
-| dashboard | 8080 | Vue.js Dashboard |
-| mongodb | 27017 | MongoDB Database |
+| Service          | Port       | Description            |
+| ---------------- | ---------- | ---------------------- |
+| validator-0      | 4004, 8800 | PBFT Validator Node 0  |
+| validator-1      | 4004, 8801 | PBFT Validator Node 1  |
+| validator-2      | 4004, 8802 | PBFT Validator Node 2  |
+| validator-3      | 4004, 8803 | PBFT Validator Node 3  |
+| rest-api-0       | 8008       | REST API (Validator 0) |
+| rest-api-1       | 8009       | REST API (Validator 1) |
+| rest-api-2       | 8010       | REST API (Validator 2) |
+| rest-api-3       | 8011       | REST API (Validator 3) |
+| iot-gateway      | 3000       | IoT Gateway API        |
+| event-subscriber | 3001       | WebSocket Server       |
+| dashboard        | 8080       | Vue.js Dashboard       |
+| mongodb          | 27017      | MongoDB Database       |
 
 ## API Documentation
 
@@ -261,34 +274,32 @@ curl http://localhost:8008/blocks
 ### Scenario 1: Smart Contract Activation
 
 1. Start the sensor simulator:
+
    ```bash
    python simulator/sim_esp32.py --device-id sensor_01 --gateway-url http://localhost:3000
    ```
-
 2. Watch the dashboard - when humidity drops below 30%, the pump status will automatically change to "ON"
-
 3. Check the blockchain explorer to see the smart contract transaction
 
 ### Scenario 2: Fault Tolerance
 
 1. While the system is running:
+
    ```bash
    docker-compose stop validator-3
    ```
-
 2. Continue sending telemetry data
-
 3. Observe that the system continues to function with 3 validators (PBFT tolerates 1 fault with 4 nodes)
 
 ### Scenario 3: Device Authentication
 
 1. Attempt to send data from an unregistered device:
+
    ```bash
    curl -X POST http://localhost:3000/api/telemetry \
      -H "Content-Type: application/json" \
      -d '{"device_id": "unauthorized_device", "temperature": 25, "humidity": 50}'
    ```
-
 2. The transaction will be rejected by the smart contract
 
 ## Smart Contract Logic
@@ -296,16 +307,19 @@ curl http://localhost:8008/blocks
 The GardenContract handles the following actions:
 
 ### REGISTER_DEVICE
+
 - Validates device ID and name
 - Stores device public key for authentication
 - Adds device to whitelist
 
 ### SEND_TELEMETRY
+
 - Validates device is whitelisted
 - Verifies transaction signature
 - **Smart Contract Logic**: If humidity < 30%, automatically sets pump status to "ON"
 
 ### Address Format
+
 ```
 70-character address:
 - First 6 chars: SHA512("GardenContract") prefix
@@ -315,6 +329,7 @@ The GardenContract handles the following actions:
 ## Troubleshooting
 
 ### Services not starting
+
 ```bash
 # Check logs
 docker-compose logs
@@ -324,12 +339,14 @@ docker-compose restart
 ```
 
 ### MongoDB connection issues
+
 ```bash
 # Check MongoDB status
 docker-compose exec mongodb mongo --eval "db.adminCommand('ping')"
 ```
 
 ### Validator not reaching consensus
+
 ```bash
 # Check validator logs
 docker-compose logs validator-0
@@ -339,6 +356,7 @@ docker-compose exec validator-0 ping validator-1
 ```
 
 ### Reset the network
+
 ```bash
 # Stop all services and remove data
 docker-compose down -v

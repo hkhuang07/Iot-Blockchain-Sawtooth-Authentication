@@ -99,9 +99,8 @@ class ESP32Simulator:
             payload = {
                 "device_id": self.device_id,
                 "temperature": round(temperature, 1),
-                "round(humidity, 1)"
+                "humidity": round(humidity, 1)      
             }
-            
             async with session.post(url, json=payload) as response:
                 if response.status == 200:
                     data = await response.json()

@@ -1,6 +1,7 @@
 {
   "name": "smart-garden-dashboard",
   "version": "1.0.0",
+  "type": "module",
   "description": "Vue.js Dashboard for Smart Garden IoT - Real-time visualization of blockchain data",
   "private": true,
   "scripts": {
