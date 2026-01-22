@@ -21,19 +21,18 @@ services:
       - ./sawtooth/genesis:/genesis:ro
     command: |
       bash -c "
-        if [ ! -f /etc/sawtooth/keys/validator.priv ]; then
-          sawadm keygen
-        fi;
-        sawtooth-validator -vv \
-          --endpoint tcp://validator-0:8800 \
-          --bind network:tcp://eth0:8800 \
-          --bind component:tcp://eth0:4004 \
-          --bind consensus:tcp://eth0:5050 \
-          --peering static \
-          --peers tcp://validator-1:8800,tcp://validator-2:8800,tcp://validator-3:8800 \
-          --scheduler parallel \
-          --network-checkpoint 10
-      "
+          if [ ! -f /etc/sawtooth/keys/validator.priv ]; then
+            sawadm keygen
+          fi;
+          sawtooth-validator -vv \
+            --endpoint tcp://validator-0:8800 \
+            --bind network:tcp://eth0:8800 \
+            --bind component:tcp://eth0:4004 \
+            --bind consensus:tcp://eth0:5050 \
+            --peering static \
+            --peers tcp://validator-1:8800,tcp://validator-2:8800,tcp://validator-3:8800 \
+            --scheduler parallel
+        "
     networks:
       - sawtooth-net
     
@@ -91,17 +90,19 @@ services:
       - ./sawtooth/keys/validator-1.priv:/etc/sawtooth/keys/validator.priv:ro
       - ./sawtooth/keys/validator-1.pub:/etc/sawtooth/keys/validator.pub:ro
     command: |
-      bash -c '
+      bash -c "
+        if [ ! -f /etc/sawtooth/keys/validator.priv ]; then
+          sawadm keygen
+        fi;
         sawtooth-validator -vv \
-          --endpoint tcp://validator-1:8800 \
+          --endpoint tcp://validator-0:8800 \
           --bind network:tcp://eth0:8800 \
           --bind component:tcp://eth0:4004 \
           --bind consensus:tcp://eth0:5050 \
           --peering static \
-          --peers tcp://validator-0:8800,tcp://validator-2:8800,tcp://validator-3:8800 \
-          --scheduler parallel \
-          --network-checkpoint 10
-      '
+          --peers tcp://validator-1:8800,tcp://validator-2:8800,tcp://validator-3:8800 \
+          --scheduler parallel
+      "
     networks:
       - sawtooth-net
     healthcheck:
@@ -164,17 +165,19 @@ services:
       - ./sawtooth/keys/validator-2.priv:/etc/sawtooth/keys/validator.priv:ro
       - ./sawtooth/keys/validator-2.pub:/etc/sawtooth/keys/validator.pub:ro
     command: |
-      bash -c '
+      bash -c "
+        if [ ! -f /etc/sawtooth/keys/validator.priv ]; then
+          sawadm keygen
+        fi;
         sawtooth-validator -vv \
-          --endpoint tcp://validator-2:8800 \
+          --endpoint tcp://validator-0:8800 \
           --bind network:tcp://eth0:8800 \
           --bind component:tcp://eth0:4004 \
           --bind consensus:tcp://eth0:5050 \
           --peering static \
-          --peers tcp://validator-0:8800,tcp://validator-1:8800,tcp://validator-3:8800 \
-          --scheduler parallel \
-          --network-checkpoint 10
-      '
+          --peers tcp://validator-1:8800,tcp://validator-2:8800,tcp://validator-3:8800 \
+          --scheduler parallel
+      "
     networks:
       - sawtooth-net
 
@@ -232,17 +235,19 @@ services:
       - ./sawtooth/keys/validator-3.priv:/etc/sawtooth/keys/validator.priv:ro
       - ./sawtooth/keys/validator-3.pub:/etc/sawtooth/keys/validator.pub:ro
     command: |
-      bash -c '
+      bash -c "
+        if [ ! -f /etc/sawtooth/keys/validator.priv ]; then
+          sawadm keygen
+        fi;
         sawtooth-validator -vv \
-          --endpoint tcp://validator-3:8800 \
+          --endpoint tcp://validator-0:8800 \
           --bind network:tcp://eth0:8800 \
           --bind component:tcp://eth0:4004 \
           --bind consensus:tcp://eth0:5050 \
           --peering static \
-          --peers tcp://validator-0:8800,tcp://validator-1:8800,tcp://validator-2:8800 \
-          --scheduler parallel \
-          --network-checkpoint 10
-      '
+          --peers tcp://validator-1:8800,tcp://validator-2:8800,tcp://validator-3:8800 \
+          --scheduler parallel
+      "
     networks:
       - sawtooth-net
     healthcheck:
@@ -313,9 +318,9 @@ services:
       - validator-0
     environment:
       - PYTHONPATH=/project
+      - PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python
     volumes:
       - ./processors/garden_tp:/project
-    command: python3 main.py --connect tcp://validator-0:4004 -v
     networks:
       - sawtooth-net
 
@@ -348,22 +353,21 @@ services:
       context: ./gateway
       dockerfile: Dockerfile
     container_name: iot-gateway
-    expose:
-      - 3000
     ports:
-      - "3000:3000"
+      - "3030:3030" 
     environment:
+      - PORT=3030
       - VALIDATOR_URL=http://rest-api-0:8008
-      - MONGO_URL=mongodb://admin:password123@mongodb:27017
+      - MONGO_URL=mongodb://iot_smartgarden:IoT_Smart_Garden@cluster0.17bgl.mongodb.net/?appName=Cluster0
       - GARDEN_FAMILY_NAME=GardenContract
       - GARDEN_FAMILY_VERSION=1.0
     depends_on:
       - rest-api-0
       - mongodb
     volumes:
-      - ./gateway:/app
+      - ./gateway:/app           
+      - /app/node_modules        
       - ./device_keys:/app/keys
-    command: node index.js
     networks:
       - sawtooth-net
 
@@ -376,19 +380,17 @@ services:
       context: ./subscriber
       dockerfile: Dockerfile
     container_name: event-subscriber
-    expose:
-      - 3001
     depends_on:
       - validator-0
       - mongodb
       - iot-gateway
     environment:
       - VALIDATOR_URL=tcp://validator-0:4004
-      - MONGO_URL=mongodb://admin:password123@mongodb:27017
-      - SOCKET_SERVER=http://dashboard:8080
+      - MONGO_URL=mongodb://iot_smartgarden:IoT_Smart_Garden@cluster0.17bgl.mongodb.net/?appName=Cluster0
+      - SOCKET_SERVER=http://vue-dashboard:8080
     volumes:
       - ./subscriber:/app
-    command: node sync.js
+      - /app/node_modules       
     networks:
       - sawtooth-net
 
@@ -408,7 +410,7 @@ services:
     depends_on:
       - event-subscriber
     environment:
-      - VUE_APP_API_URL=http://localhost:3000
+      - VUE_APP_API_URL=http://localhost:3030
       - VUE_APP_WS_URL=http://localhost:3001
     volumes:
       - ./dashboard:/app

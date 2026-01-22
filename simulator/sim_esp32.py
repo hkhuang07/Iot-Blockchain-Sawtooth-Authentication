@@ -226,7 +226,7 @@ def main():
     )
     parser.add_argument(
         "--gateway-url",
-        default="http://localhost:3000",
+        default="http://localhost:3030",
         help="URL of the IoT Gateway"
     )
     parser.add_argument(

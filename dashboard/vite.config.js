@@ -13,7 +13,7 @@ export default defineConfig({
     port: 8080,
     proxy: {
       '/api': {
-        target: 'http://iot-gateway:3000',
+        target: 'http://iot-gateway:3030',
         changeOrigin: true
       },
       '/ws': {

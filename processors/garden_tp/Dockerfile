@@ -9,10 +9,9 @@ RUN apt-get update && apt-get install -y \
     lsb-release \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Sawtooth SDK
-RUN pip install --no-cache-dir \
-    sawtooth-sdk \
-    protobuf
+# QUAN TRỌNG: Cài đặt protobuf bản cũ TRƯỚC khi cài sawtooth-sdk
+RUN pip install --no-cache-dir protobuf==3.20.3
+RUN pip install --no-cache-dir sawtooth-sdk
 
 # Copy application files
 COPY handler.py .
