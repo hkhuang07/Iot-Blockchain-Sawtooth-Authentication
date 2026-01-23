@@ -6,8 +6,8 @@
  * to the frontend via Socket.io.
  */
 
-const { ZmqEventSubscriber } = require('sawtooth-sdk/event');
-const { protobuf } = require('sawtooth-sdk');
+const { Stream } = require('sawtooth-sdk/messaging/stream');
+const protobuf = require('sawtooth-sdk/protobuf');
 const mongoose = require('mongoose');
 const axios = require('axios');
 const http = require('http');
@@ -362,47 +362,47 @@ async function syncFromRestApi() {
  * Start ZMQ event subscription
  */
 async function startZmqSubscription() {
-    return new Promise((resolve, reject) => {
+    return new Promise(function(resolve, reject) {
         try {
-            console.log('[Subscriber] Connecting to validator via ZMQ...');
+            console.log('[Subscriber] Connecting to validator via ZMQ Stream...');
             
-            subscriber = new ZmqEventSubscriber(CONFIG.VALIDATOR_URL);
+            // 1. Chỉ khởi tạo Stream ở đây
+            subscriber = new Stream(CONFIG.VALIDATOR_URL);
             
-            // Subscribe to block commit events
-            subscriber.addHandler((event) => {
-                console.log('[Subscriber] Received event:', event.eventType);
-                
-                if (event.eventType === 'sawtooth/block-commit') {
-                    const blockId = event.attributes.find(
-                        attr => attr.key === 'block_id'
-                    )?.value;
-                    
-                    if (blockId) {
-                        fetchBlockDetails(blockId).then(blockData => {
-                            if (blockData) {
-                                processBlock(blockData);
+            // 2. Phải đợi kết nối thành công mới gán onReceive
+            subscriber.connect().then(function() {
+                console.log('[Subscriber] ZMQ Connected - Setting up listeners');
+                isConnected = true;
+
+                // CHỈ GÁN onReceive Ở ĐÂY
+                subscriber.onReceive(function(message) {
+                    if (message.messageType === protobuf.Message.MessageType.CLIENT_EVENTS_REPLY) {
+                        const eventList = protobuf.EventList.decode(message.content);
+                        eventList.events.forEach(function(event) {
+                            if (event.eventType === 'sawtooth/block-commit') {
+                                const blockIdAttr = event.attributes.find(function(a) { return a.key === 'block_id'; });
+                                const blockId = blockIdAttr ? blockIdAttr.value : undefined;
+                                if (blockId) {
+                                    fetchBlockDetails(blockId).then(function(blockData) {
+                                        if (blockData) processBlock(blockData);
+                                    });
+                                }
                             }
                         });
                     }
-                }
-            });
-            
-            // Subscribe to state change events
-            subscriber.addHandler((event) => {
-                if (event.eventType === 'sawtooth/state-change') {
-                    console.log('[Subscriber] State change detected');
-                    // Could process state changes here
-                }
-            });
-            
-            subscriber.connect().then(() => {
-                console.log('[Subscriber] ZMQ connected');
-                isConnected = true;
-                
-                // Subscribe to specific events
-                subscriber.subscribe('sawtooth/block-commit');
-                subscriber.subscribe('sawtooth/state-change');
-                
+                });
+
+                // Đăng ký sự kiện như cũ
+                const blockSub = protobuf.EventSubscription.create({ eventType: 'sawtooth/block-commit' });
+                const subscribeRequest = protobuf.ClientEventsSubscribeRequest.create({
+                    subscriptions: [blockSub]
+                });
+
+                subscriber.send(
+                    protobuf.Message.MessageType.CLIENT_EVENTS_SUBSCRIBE_REQUEST,
+                    protobuf.ClientEventsSubscribeRequest.encode(subscribeRequest).finish()
+                );
+
                 resolve();
             }).catch(reject);
             

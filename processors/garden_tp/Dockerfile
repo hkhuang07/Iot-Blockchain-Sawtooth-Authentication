@@ -9,16 +9,18 @@ RUN apt-get update && apt-get install -y \
     lsb-release \
     && rm -rf /var/lib/apt/lists/*
 
-# QUAN TRỌNG: Cài đặt protobuf bản cũ TRƯỚC khi cài sawtooth-sdk
 RUN pip install --no-cache-dir protobuf==3.20.3
 RUN pip install --no-cache-dir sawtooth-sdk
 
+
 # Copy application files
-COPY handler.py .
-COPY main.py .
+COPY . .
 
 # Expose port
 EXPOSE 4004
+
+# Thêm biến môi trường ép chạy bản python để tránh lỗi C++ Descriptor
+ENV PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python
 
 # Run the transaction processor
 CMD ["python3", "main.py", "--connect", "tcp://validator-0:4004", "-v"]
